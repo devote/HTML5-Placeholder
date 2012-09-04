@@ -1,5 +1,5 @@
 /*
- * Brings HTML5 "placeholder" attribute into all older browser -  v0.0.1 beta
+ * Brings HTML5 "placeholder" attribute into all older browser -  v0.0.2 beta
  *
  * Support: IE6+, FF3+, Opera 9+, Safari, Chrome
  *
@@ -27,7 +27,7 @@
 					style.sheet.insertRule( ":" + prefixes[ i ] + "placeholder{}", 0 );
 				} catch( _e_ ) {}
 			}
-			var result = style.sheet ? style.sheet.cssRules.length > 0 : false;
+			var result = style.sheet ? style.sheet.cssRules.length > 0 : 0;
 			style.parentNode.removeChild( style );
 			return result;
 		})( document.createElement( 'style' ) );
@@ -41,12 +41,14 @@
 	if ( !isSupportPseudoPlaceholder || ( !window.external && !window.opera ) ) {
 
 		var
+			elements = [ "input", "textarea" ],
 			eventMethod = window.addEventListener ? ['','addEventListener'] : ['on','attachEvent'],
 			focusHandler = function( e ) {
 				var type, target = e && e.target || window.event.srcElement;
 				if ( type = target.getAttribute( 'data-placeholder-type' ) ) {
 					if ( target._relatedTarget ) {
 						target.parentNode.removeChild( target._relatedTarget );
+						target.runtimeStyle.display = target._oldDisplay;
 						target._relatedTarget = null;
 					}
 					target.removeAttribute( 'data-placeholder-type' );
@@ -54,7 +56,7 @@
 						replace(/\s+input-placeholder\s+/, ' ').
 						replace( /^[\s]+|[\s](?=\s)|[\s]+$/g, '' );
 					target.value = "";
-					if ( ( !msie || msie > 8 ) && target.type !== type ) {
+					if ( ( !msie || msie > 8 ) && target.nodeName === "INPUT" && target.type !== type ) {
 						target.setAttribute( 'type', type );
 					}
 				}
@@ -62,32 +64,32 @@
 			blurHandler = function( e ) {
 				var target = e && e.target || window.event.srcElement;
 				if ( target.value === "" ) {
-					target.setAttribute( 'data-placeholder-type', target.type );
+					target.setAttribute( 'data-placeholder-type', target.nodeName === "INPUT" ? target.type : "true" );
 					target.className += ' input-placeholder';
-					if ( target.type !== 'text' && msie && msie < 9 ) {
-						var input = document.createElement( 'input' );
-						input._relatedTarget = target;
-						target._relatedTarget = input;
-						input.className = target.className + " input-placeholder";
-						input.style.position = "absolute";
-						input.style.zIndex = ( parseInt( target.currentStyle.zIndex ) || 0 ) + 1;
-						input.style.borderColor = input.style.backgroundColor = "transparent";
-						input.readOnly = true;
-						input.type = "text";
-						input.value = target.getAttribute( 'data-placeholder' );
-						input.onfocus = function() {
-							var target = window.event.srcElement;
-							if ( target.nextSibling === target._relatedTarget )  {
-								target.nextSibling.focus();
-								target.nextSibling._relatedTarget = null;
-							}
-							target.parentNode.removeChild( target );
-						}
-						target.parentNode.insertBefore( input, target );
-					} else {
-						target.value = target.getAttribute( 'data-placeholder' );
-						if ( target.type !== 'text' ) {
+					target.value = target.getAttribute( 'data-placeholder' );
+					if ( target.nodeName === "INPUT" && target.type !== 'text' ) {
+						try {
 							target.setAttribute( 'type', 'text' );
+						} catch( _e_ ) {
+							var input = document.createElement( 'input' );
+							input._relatedTarget = target;
+							target._relatedTarget = input;
+							target._oldDisplay = target.currentStyle.display;
+							target.runtimeStyle.display = 'none';
+							input.className = target.className + " input-placeholder";
+							input.type = "text";
+							input.value = target.getAttribute( 'data-placeholder' );
+							input.onfocus = function() {
+								var input = window.event.srcElement,
+									target = input.nextSibling;
+								if ( target === input._relatedTarget )  {
+									target.runtimeStyle.display = target._oldDisplay;
+									target.focus();
+									target._relatedTarget = null;
+								}
+								input.parentNode.removeChild( input );
+							}
+							target.parentNode.insertBefore( input, target );
 						}
 					}
 				}
@@ -95,7 +97,7 @@
 
 		window["inputPlaceholder"] = function( elem /* internal use only -> */, value ) {
 			if (
-				( elem.type === "text" || elem.type === "password" ) &&
+				( elem.nodeName === "TEXTAREA" || elem.type === "text" || elem.type === "password" ) &&
 				( value = elem.getAttribute( 'placeholder' ) ) )
 			{
 				elem.setAttribute( 'data-placeholder', value );
@@ -103,13 +105,28 @@
 				blurHandler( { "target": elem } );
 				elem[ eventMethod[ 1 ] ]( eventMethod[ 0 ] + "focus", focusHandler, false );
 				elem[ eventMethod[ 1 ] ]( eventMethod[ 0 ] + "blur", blurHandler, false );
+
+				if ( elem.form && !elem.form.__submitAttached ) {
+					elem.form.__submitAttached = true;
+					elem.form[ eventMethod[ 1 ] ]( eventMethod[ 0 ] + "submit", function( e ) {
+						var target = e && e.target || window.event.srcElement;
+						for( var i = 0, elems; i < elements.length; i++ ) {
+							elems = target.getElementsByTagName( elements[ i ] );
+							for( var j = 0, elem; elem = elems[ j++ ]; ) {
+								focusHandler( { "target": elem } );
+							}
+						}
+					}, false );
+				}
 			}
 		}
 
 		var DOMContentLoaded = function() {
-			var elems = document.getElementsByTagName('input');
-			for( var i = 0, elem; elem = elems[ i++ ]; ) {
-				window["inputPlaceholder"]( elem );
+			for( var i = 0, elems; i < elements.length; i++ ) {
+				elems = document.getElementsByTagName( elements[ i ] );
+				for( var j = 0, elem; elem = elems[ j++ ]; ) {
+					window["inputPlaceholder"]( elem );
+				}
 			}
 		}
 
