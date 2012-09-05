@@ -1,5 +1,5 @@
 /*
- * Brings HTML5 "placeholder" attribute into all older browser -  v0.0.2 beta
+ * Brings HTML5 "placeholder" attribute into all older browser -  v0.0.3 beta
  *
  * Support: IE6+, FF3+, Opera 9+, Safari, Chrome
  *
@@ -11,7 +11,7 @@
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  *
- * Update: 04-09-2012
+ * Update: 05-09-2012
  */
 
 (function( window ) {
@@ -96,10 +96,7 @@
 			};
 
 		window["inputPlaceholder"] = function( elem /* internal use only -> */, value ) {
-			if (
-				( elem.nodeName === "TEXTAREA" || elem.type === "text" || elem.type === "password" ) &&
-				( value = elem.getAttribute( 'placeholder' ) ) )
-			{
+			if ( value = elem.getAttribute( 'placeholder' ) ) {
 				elem.setAttribute( 'data-placeholder', value );
 				elem.removeAttribute( 'placeholder' );
 				blurHandler( { "target": elem } );

@@ -20,7 +20,6 @@ example:
 		<style type="text/css">
 
 			input {
-				aposition: absolute;
 				color: #f00;
 				text-align: center;
 			}
